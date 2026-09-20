@@ -14,6 +14,9 @@ const activityCatalogRoutes = require("./src/routes/activityCatalogRoutes");
 const shareRoutes = require("./src/routes/shareRoutes");
 const publicTripRoutes = require("./src/routes/publicTripRoutes");
 const copyTripRoutes = require("./src/routes/copyTripRoutes");
+const profileRoutes = require("./src/routes/profileRoutes");
+const passwordRoutes = require("./src/routes/passwordRoutes");
+const dashboardRoutes = require("./src/routes/dashboardRoutes");
 
 const app = express();
 
@@ -33,6 +36,9 @@ app.use("/api/activity-catalog", activityCatalogRoutes);
 app.use("/api/trips", shareRoutes);
 app.use("/api/public/trips", publicTripRoutes);
 app.use("/api/public/trips", copyTripRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/password",passwordRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // app.get("/", (req, res) => {
 //   res.send("GlobeTrotter API is running!");
