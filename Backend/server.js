@@ -3,11 +3,23 @@ const cors = require("cors");
 require("dotenv").config();
 
 const pool = require("./src/config/Database");
+const authRoutes = require("./src/routes/authRoutes");
+const tripRoutes = require("./src/routes/tripRoutes");
+const stopRoutes = require("./src/routes/stopRoutes");
+const itineraryRoutes = require("./src/routes/itineraryRoutes");
+const activityRoutes = require("./src/routes/activityRoutes");
 
 const app = express();
 
+
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/trips",itineraryRoutes);
+app.use("/api/trips",tripRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/trips",stopRoutes);
+app.use("/api/stops",activityRoutes);
 
 // app.get("/", (req, res) => {
 //   res.send("GlobeTrotter API is running!");
