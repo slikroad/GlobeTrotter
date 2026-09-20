@@ -89,7 +89,7 @@ const generateMockItinerary = async ({
     Number(travelers) || 1;
 
   // -----------------------------
-  // 5. Budget limits
+  // 5. Budget configuration
   // -----------------------------
   const budgetConfig = {
     budget: {
@@ -119,61 +119,195 @@ const generateMockItinerary = async ({
     budgetConfig.moderate;
 
   // -----------------------------
-  // 6. Match activities to style
+  // 6. Build activity pools
   // -----------------------------
-  let matchingActivities =
+
+  // Exact travel-style activities
+  const styleActivities =
     catalogActivities.filter(
       (activity) =>
         activity.type?.toLowerCase() ===
         selectedStyle
     );
 
-  // If not enough exact matches,
-  // include sightseeing/culture activities.
-  if (matchingActivities.length === 0) {
-    matchingActivities =
-      catalogActivities.filter(
-        (activity) =>
-          activity.type?.toLowerCase() ===
-            "sightseeing" ||
-          activity.type?.toLowerCase() ===
-            "culture"
-      );
-  }
-
-  // If still empty, use all activities.
-  if (matchingActivities.length === 0) {
-    matchingActivities =
-      catalogActivities;
-  }
+  // Other useful activities
+  const otherActivities =
+    catalogActivities.filter(
+      (activity) =>
+        activity.type?.toLowerCase() !==
+        selectedStyle
+    );
 
   // -----------------------------
-  // 7. Apply budget filtering
+  // 7. Apply budget preference
   // -----------------------------
-  let budgetActivities =
-    matchingActivities.filter(
+
+  // Activities that fit selected budget
+  const affordableActivities =
+    catalogActivities.filter(
       (activity) =>
         Number(activity.cost || 0) <=
         budgetSettings.maxActivityCost
     );
 
-  // Don't leave itinerary empty.
-  if (budgetActivities.length === 0) {
-    budgetActivities =
-      matchingActivities;
+  // -----------------------------
+  // 8. Create prioritized pool
+  // -----------------------------
+  let activityPool = [];
+
+  /*
+    Priority:
+
+    1. Matching travel style + budget
+    2. Matching travel style
+    3. Other affordable activities
+    4. Other activities if absolutely necessary
+  */
+
+  const styleAndBudget =
+    styleActivities.filter(
+      (activity) =>
+        Number(activity.cost || 0) <=
+        budgetSettings.maxActivityCost
+    );
+
+  activityPool.push(...styleAndBudget);
+
+  const styleOnly =
+    styleActivities.filter(
+      (activity) =>
+        !activityPool.some(
+          (selected) =>
+            selected.id === activity.id
+        )
+    );
+
+  /*
+    For budget trips, we don't want expensive
+    activities unless there are no alternatives.
+  */
+
+  if (
+    selectedBudget === "budget" &&
+    styleOnly.length > 0
+  ) {
+    const cheapStyleActivities =
+      styleOnly.filter(
+        (activity) =>
+          Number(activity.cost || 0) <=
+          budgetSettings.maxActivityCost
+      );
+
+    activityPool.push(
+      ...cheapStyleActivities
+    );
+  }
+
+  // Add other affordable activities
+  const affordableOthers =
+    otherActivities.filter(
+      (activity) =>
+        Number(activity.cost || 0) <=
+        budgetSettings.maxActivityCost &&
+        !activityPool.some(
+          (selected) =>
+            selected.id === activity.id
+        )
+    );
+
+  activityPool.push(
+    ...affordableOthers
+  );
+
+  // -----------------------------
+  // 9. Budget-specific sorting
+  // -----------------------------
+
+  if (selectedBudget === "budget") {
+
+    // Cheapest activities first
+    activityPool.sort(
+      (a, b) =>
+        Number(a.cost || 0) -
+        Number(b.cost || 0)
+    );
+
+  } else if (
+    selectedBudget === "moderate"
+  ) {
+
+    /*
+      Moderate:
+      Prefer reasonably priced activities,
+      but still allow some expensive ones.
+    */
+
+    activityPool.sort(
+      (a, b) => {
+
+        const costA =
+          Number(a.cost || 0);
+
+        const costB =
+          Number(b.cost || 0);
+
+        const target = 750;
+
+        return (
+          Math.abs(costA - target) -
+          Math.abs(costB - target)
+        );
+      }
+    );
+
+  } else if (
+    selectedBudget === "luxury"
+  ) {
+
+    // Premium activities first
+    activityPool.sort(
+      (a, b) =>
+        Number(b.cost || 0) -
+        Number(a.cost || 0)
+    );
   }
 
   // -----------------------------
-  // 8. Generate days
+  // 10. If pool is empty,
+  // use all city activities
+  // -----------------------------
+  if (activityPool.length === 0) {
+    activityPool =
+      [...catalogActivities];
+  }
+
+  // -----------------------------
+  // 11. Generate days
   // -----------------------------
   const days = [];
   let totalCost = 0;
+
+  /*
+    Keep track of activities already used.
+
+    This prevents:
+    Day 1 → Activity A
+    Day 1 → Activity A
+
+    and also tries to prevent:
+
+    Day 1 → Activity A
+    Day 2 → Activity A
+  */
+  const usedActivityIds =
+    new Set();
 
   for (
     let i = 0;
     i < numberOfDays;
     i++
   ) {
+
     const currentDate =
       new Date(startDate);
 
@@ -181,50 +315,81 @@ const generateMockItinerary = async ({
       startDate.getDate() + i
     );
 
-    // Select 2 activities per day
-    const firstIndex =
-      (i * 2) %
-      budgetActivities.length;
+    // -----------------------------
+    // 12. Find unused activities
+    // -----------------------------
+    let availableActivities =
+      activityPool.filter(
+        (activity) =>
+          !usedActivityIds.has(
+            activity.id
+          )
+      );
 
-    const selectedActivities = [];
+    /*
+      If all activities have already
+      been used, allow reuse.
 
-const activitiesPerDay = Math.min(
-  2,
-  budgetActivities.length
-);
+      This is only necessary when the
+      trip is longer than the activity
+      catalog.
+    */
+    if (
+      availableActivities.length === 0
+    ) {
 
-for (let j = 0; j < activitiesPerDay; j++) {
-  const activity =
-    budgetActivities[
-      (firstIndex + j) %
-        budgetActivities.length
-    ];
+      availableActivities =
+        [...activityPool];
 
-  // Prevent duplicate activity on the same day
-  if (
-    !selectedActivities.some(
-      (selected) =>
-        selected.id === activity.id
-    )
-  ) {
-    selectedActivities.push(activity);
-  }
-}
+      usedActivityIds.clear();
+    }
 
     // -----------------------------
-    // 9. Format activities
+    // 13. Select activities for day
+    // -----------------------------
+
+    /*
+      Maximum 2 activities per day.
+    */
+
+    const activitiesPerDay =
+      Math.min(
+        2,
+        availableActivities.length
+      );
+
+    const selectedActivities =
+      availableActivities.slice(
+        0,
+        activitiesPerDay
+      );
+
+    // Mark them as used
+    selectedActivities.forEach(
+      (activity) => {
+        usedActivityIds.add(
+          activity.id
+        );
+      }
+    );
+
+    // -----------------------------
+    // 14. Format activities
     // -----------------------------
     const dayActivities =
       selectedActivities.map(
         (activity, index) => {
+
           const baseCost =
             Number(activity.cost || 0);
 
           const activityCost =
-            baseCost * travelerCount;
+            baseCost *
+            travelerCount;
 
           return {
-            id: `${i + 1}-${index + 1}`,
+            id:
+              `${i + 1}-${index + 1}`,
 
             catalog_id:
               activity.id,
@@ -256,8 +421,9 @@ for (let j = 0; j < activitiesPerDay; j++) {
       );
 
     // -----------------------------
-    // 10. Calculate daily costs
+    // 15. Calculate daily costs
     // -----------------------------
+
     const hotelCost =
       budgetSettings.hotel;
 
@@ -286,10 +452,12 @@ for (let j = 0; j < activitiesPerDay; j++) {
     totalCost += dayTotal;
 
     // -----------------------------
-    // 11. Add day
+    // 16. Add day
     // -----------------------------
     days.push({
-      day: i + 1,
+
+      day:
+        i + 1,
 
       date:
         currentDate
@@ -306,6 +474,7 @@ for (let j = 0; j < activitiesPerDay; j++) {
         dayActivities,
 
       estimated_cost: {
+
         hotel:
           hotelCost,
 
@@ -325,10 +494,12 @@ for (let j = 0; j < activitiesPerDay; j++) {
   }
 
   // -----------------------------
-  // 12. Return itinerary
+  // 17. Return itinerary
   // -----------------------------
   return {
+
     trip: {
+
       destination:
         city.name,
 
@@ -349,6 +520,7 @@ for (let j = 0; j < activitiesPerDay; j++) {
     days,
 
     budget_summary: {
+
       total:
         totalCost,
 
