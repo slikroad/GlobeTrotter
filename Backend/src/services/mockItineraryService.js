@@ -1,4 +1,6 @@
-const generateMockItinerary = ({
+const pool = require("../config/Database");
+
+const generateMockItinerary = async ({
   destination,
   start_date,
   end_date,
@@ -6,211 +8,362 @@ const generateMockItinerary = ({
   travel_style,
   travelers,
 }) => {
+  // -----------------------------
+  // 1. Calculate number of days
+  // -----------------------------
   const startDate = new Date(start_date);
   const endDate = new Date(end_date);
 
-  // Calculate number of days
   const numberOfDays =
     Math.floor(
-      (endDate - startDate) / (1000 * 60 * 60 * 24)
+      (endDate - startDate) /
+        (1000 * 60 * 60 * 24)
     ) + 1;
 
   if (numberOfDays <= 0) {
     throw new Error("Invalid travel dates");
   }
 
-  // Example cities based on destination
-  const cityData = {
-    Rajasthan: [
-      {
-        city: "Jaipur",
-        country: "India",
-      },
-      {
-        city: "Jodhpur",
-        country: "India",
-      },
-      {
-        city: "Udaipur",
-        country: "India",
-      },
-    ],
+  // -----------------------------
+  // 2. Find destination
+  // -----------------------------
+  const [cities] = await pool.query(
+    `SELECT
+       id,
+       name,
+       country,
+       description,
+       cost_index,
+       popularity,
+       image_url
+     FROM cities
+     WHERE name = ?
+     LIMIT 1`,
+    [destination]
+  );
 
-    Goa: [
-      {
-        city: "Panaji",
-        country: "India",
-      },
-      {
-        city: "Calangute",
-        country: "India",
-      },
-    ],
+  if (cities.length === 0) {
+    throw new Error(
+      "Destination not found in city database"
+    );
+  }
 
-    Kerala: [
-      {
-        city: "Kochi",
-        country: "India",
-      },
-      {
-        city: "Munnar",
-        country: "India",
-      },
-      {
-        city: "Alleppey",
-        country: "India",
-      },
-    ],
-  };
+  const city = cities[0];
 
-  const cities = cityData[destination] || [
-    {
-      city: destination,
-      country: "India",
-    },
-  ];
+  // -----------------------------
+  // 3. Get activities for city
+  // -----------------------------
+  const [catalogActivities] =
+    await pool.query(
+      `SELECT
+         id,
+         name,
+         type,
+         description,
+         duration_minutes,
+         cost,
+         image_url,
+         popularity
+       FROM activity_catalog
+       WHERE city_id = ?
+       ORDER BY popularity DESC`,
+      [city.id]
+    );
 
-  // Budget configuration
+  if (catalogActivities.length === 0) {
+    throw new Error(
+      "No activities found for this destination"
+    );
+  }
+
+  // -----------------------------
+  // 4. Normalize user selections
+  // -----------------------------
+  const selectedBudget =
+    budget?.toLowerCase() || "moderate";
+
+  const selectedStyle =
+    travel_style?.toLowerCase() || "culture";
+
+  const travelerCount =
+    Number(travelers) || 1;
+
+  // -----------------------------
+  // 5. Budget limits
+  // -----------------------------
   const budgetConfig = {
     budget: {
+      maxActivityCost: 500,
       hotel: 1500,
       meal: 300,
-      activity: 200,
       transport: 300,
     },
 
     moderate: {
+      maxActivityCost: 1500,
       hotel: 3500,
       meal: 700,
-      activity: 600,
       transport: 700,
     },
 
     luxury: {
+      maxActivityCost: Infinity,
       hotel: 8000,
       meal: 1800,
-      activity: 1500,
       transport: 1500,
     },
   };
 
-  const selectedBudget =
-    budgetConfig[budget?.toLowerCase()] ||
+  const budgetSettings =
+    budgetConfig[selectedBudget] ||
     budgetConfig.moderate;
 
-  const activities = [
-    {
-      name: "Local City Tour",
-      type: "Sightseeing",
-      description: "Explore the main attractions of the city.",
-      duration_minutes: 180,
-    },
-    {
-      name: "Local Food Experience",
-      type: "Food",
-      description: "Try popular local dishes and cuisine.",
-      duration_minutes: 120,
-    },
-    {
-      name: "Cultural Experience",
-      type: "Culture",
-      description: "Experience the local culture and heritage.",
-      duration_minutes: 150,
-    },
-  ];
+  // -----------------------------
+  // 6. Match activities to style
+  // -----------------------------
+  let matchingActivities =
+    catalogActivities.filter(
+      (activity) =>
+        activity.type?.toLowerCase() ===
+        selectedStyle
+    );
 
+  // If not enough exact matches,
+  // include sightseeing/culture activities.
+  if (matchingActivities.length === 0) {
+    matchingActivities =
+      catalogActivities.filter(
+        (activity) =>
+          activity.type?.toLowerCase() ===
+            "sightseeing" ||
+          activity.type?.toLowerCase() ===
+            "culture"
+      );
+  }
+
+  // If still empty, use all activities.
+  if (matchingActivities.length === 0) {
+    matchingActivities =
+      catalogActivities;
+  }
+
+  // -----------------------------
+  // 7. Apply budget filtering
+  // -----------------------------
+  let budgetActivities =
+    matchingActivities.filter(
+      (activity) =>
+        Number(activity.cost || 0) <=
+        budgetSettings.maxActivityCost
+    );
+
+  // Don't leave itinerary empty.
+  if (budgetActivities.length === 0) {
+    budgetActivities =
+      matchingActivities;
+  }
+
+  // -----------------------------
+  // 8. Generate days
+  // -----------------------------
   const days = [];
-
   let totalCost = 0;
 
-  for (let i = 0; i < numberOfDays; i++) {
-    const currentDate = new Date(startDate);
-    currentDate.setDate(startDate.getDate() + i);
+  for (
+    let i = 0;
+    i < numberOfDays;
+    i++
+  ) {
+    const currentDate =
+      new Date(startDate);
 
-    // Change city every few days
-    const cityIndex = Math.min(
-      Math.floor(i / 2),
-      cities.length - 1
+    currentDate.setDate(
+      startDate.getDate() + i
     );
 
-    const city = cities[cityIndex];
+    // Select 2 activities per day
+    const firstIndex =
+      (i * 2) %
+      budgetActivities.length;
 
-    const dayActivities = activities.map(
-      (activity, index) => {
-        const activityCost =
-          selectedBudget.activity +
-          index * Math.round(selectedBudget.activity * 0.25);
+    const selectedActivities = [];
 
-        totalCost += activityCost;
+const activitiesPerDay = Math.min(
+  2,
+  budgetActivities.length
+);
 
-        return {
-          id: `${i + 1}-${index + 1}`,
-          name: activity.name,
-          type: activity.type,
-          description: activity.description,
-          start_time: `${10 + index * 3}:00`,
-          duration_minutes: activity.duration_minutes,
-          cost: activityCost,
-        };
-      }
-    );
+for (let j = 0; j < activitiesPerDay; j++) {
+  const activity =
+    budgetActivities[
+      (firstIndex + j) %
+        budgetActivities.length
+    ];
 
-    const dayHotel = selectedBudget.hotel;
-    const dayMeals = selectedBudget.meal * 2;
-    const dayTransport = selectedBudget.transport;
+  // Prevent duplicate activity on the same day
+  if (
+    !selectedActivities.some(
+      (selected) =>
+        selected.id === activity.id
+    )
+  ) {
+    selectedActivities.push(activity);
+  }
+}
 
-    totalCost +=
-      dayHotel +
-      dayMeals +
-      dayTransport;
+    // -----------------------------
+    // 9. Format activities
+    // -----------------------------
+    const dayActivities =
+      selectedActivities.map(
+        (activity, index) => {
+          const baseCost =
+            Number(activity.cost || 0);
 
+          const activityCost =
+            baseCost * travelerCount;
+
+          return {
+            id: `${i + 1}-${index + 1}`,
+
+            catalog_id:
+              activity.id,
+
+            name:
+              activity.name,
+
+            type:
+              activity.type,
+
+            description:
+              activity.description,
+
+            image_url:
+              activity.image_url,
+
+            start_time:
+              index === 0
+                ? "10:00"
+                : "15:00",
+
+            duration_minutes:
+              activity.duration_minutes,
+
+            cost:
+              activityCost,
+          };
+        }
+      );
+
+    // -----------------------------
+    // 10. Calculate daily costs
+    // -----------------------------
+    const hotelCost =
+      budgetSettings.hotel;
+
+    const mealsCost =
+      budgetSettings.meal *
+      2 *
+      travelerCount;
+
+    const transportCost =
+      budgetSettings.transport *
+      travelerCount;
+
+    const activityCost =
+      dayActivities.reduce(
+        (sum, activity) =>
+          sum + activity.cost,
+        0
+      );
+
+    const dayTotal =
+      hotelCost +
+      mealsCost +
+      transportCost +
+      activityCost;
+
+    totalCost += dayTotal;
+
+    // -----------------------------
+    // 11. Add day
+    // -----------------------------
     days.push({
       day: i + 1,
-      date: currentDate.toISOString().split("T")[0],
-      city: city.city,
-      country: city.country,
-      activities: dayActivities,
+
+      date:
+        currentDate
+          .toISOString()
+          .split("T")[0],
+
+      city:
+        city.name,
+
+      country:
+        city.country,
+
+      activities:
+        dayActivities,
+
       estimated_cost: {
-        hotel: dayHotel,
-        meals: dayMeals,
-        transport: dayTransport,
-        activities: dayActivities.reduce(
-          (sum, activity) => sum + activity.cost,
-          0
-        ),
+        hotel:
+          hotelCost,
+
+        meals:
+          mealsCost,
+
+        transport:
+          transportCost,
+
+        activities:
+          activityCost,
+
         total:
-          dayHotel +
-          dayMeals +
-          dayTransport +
-          dayActivities.reduce(
-            (sum, activity) => sum + activity.cost,
-            0
-          ),
+          dayTotal,
       },
     });
   }
 
+  // -----------------------------
+  // 12. Return itinerary
+  // -----------------------------
   return {
     trip: {
-      destination,
+      destination:
+        city.name,
+
       start_date,
+
       end_date,
-      budget,
-      travel_style,
-      travelers: travelers || 1,
+
+      budget:
+        selectedBudget,
+
+      travel_style:
+        selectedStyle,
+
+      travelers:
+        travelerCount,
     },
 
     days,
 
     budget_summary: {
-      total: totalCost,
-      average_per_day: Math.round(
-        totalCost / numberOfDays
-      ),
-      currency: "INR",
+      total:
+        totalCost,
+
+      average_per_day:
+        Math.round(
+          totalCost /
+            numberOfDays
+        ),
+
+      currency:
+        "INR",
     },
 
-    source: "mock",
+    source:
+      "database_mock",
   };
 };
 

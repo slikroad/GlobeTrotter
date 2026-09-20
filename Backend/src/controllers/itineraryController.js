@@ -31,7 +31,7 @@ const generateItinerary = async (req, res) => {
       });
     }
 
-    const itinerary = generateMockItinerary({
+    const itinerary = await generateMockItinerary({
       destination,
       start_date,
       end_date,
