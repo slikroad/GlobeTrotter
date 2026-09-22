@@ -31,7 +31,7 @@ const generateItinerary = async (req, res) => {
       });
     }
 
-    const itinerary = generateMockItinerary({
+    const itinerary = await generateMockItinerary({
       destination,
       start_date,
       end_date,
@@ -61,7 +61,10 @@ const generateItinerary = async (req, res) => {
 };
 
 const saveItinerary = async (req, res) => {
-  const connection = await pool.getConnection();
+
+
+
+    const connection = await pool.getConnection();
 
   try {
     const { itinerary } = req.body;
@@ -116,8 +119,20 @@ const saveItinerary = async (req, res) => {
 
     const tripId = tripResult.insertId;
 
+    let hotelCost = 0;
+    let mealsCost = 0;
+    let transportCost = 0;
+
     // 2. Save each day as a trip stop
     for (const day of itinerary.days) {
+
+              // Collect budget information from this day
+      if (day.estimated_cost) {
+        hotelCost += Number(day.estimated_cost.hotel || 0);
+        mealsCost += Number(day.estimated_cost.meals || 0);
+        transportCost += Number(day.estimated_cost.transport || 0);
+      }
+
       const [stopResult] = await connection.query(
         `INSERT INTO trip_stops
         (
@@ -173,7 +188,27 @@ const saveItinerary = async (req, res) => {
         }
       }
     }
-
+            // 4. Save trip budget
+    await connection.query(
+      `INSERT INTO trip_budgets
+      (
+        trip_id,
+        budget_type,
+        hotel_cost,
+        meals_cost,
+        transport_cost,
+        currency
+      )
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        tripId,
+        budget || "moderate",
+        hotelCost,
+        mealsCost,
+        transportCost,
+        "INR",
+      ]
+    );
     await connection.commit();
 
     res.status(201).json({

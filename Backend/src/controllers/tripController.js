@@ -80,18 +80,25 @@ const getTrips = async (req, res) => {
 
 
 // Get one trip
+// Get one trip with full itinerary
 const getTripById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Get trip
     const [trips] = await pool.query(
-      `SELECT id, name,        
-              DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
-              DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
-              description, cover_photo,
-              created_at, updated_at
+      `SELECT
+        id,
+        name,
+        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+        description,
+        cover_photo,
+        created_at,
+        updated_at
        FROM trips
-       WHERE id = ? AND user_id = ?`,
+       WHERE id = ?
+       AND user_id = ?`,
       [id, req.user.id]
     );
 
@@ -102,12 +109,194 @@ const getTripById = async (req, res) => {
       });
     }
 
+    const trip = trips[0];
+
+    // Get all stops
+    const [stops] = await pool.query(
+      `SELECT
+        id,
+        city_name,
+        country,
+        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+        stop_order
+       FROM trip_stops
+       WHERE trip_id = ?
+       ORDER BY stop_order ASC`,
+      [id]
+    );
+
+    const days = [];
+
+    // Get activities for each stop
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
+
+      const [activities] = await pool.query(
+        `SELECT
+          id,
+          name,
+          type,
+          description,
+          TIME_FORMAT(start_time, '%H:%i') AS start_time,
+          duration_minutes,
+          cost,
+          activity_order
+         FROM activities
+         WHERE stop_id = ?
+         ORDER BY activity_order ASC`,
+        [stop.id]
+      );
+
+      const formattedActivities = activities.map(
+        (activity) => ({
+          id: activity.id,
+          name: activity.name,
+          type: activity.type,
+          description: activity.description,
+          start_time: activity.start_time,
+          duration_minutes: activity.duration_minutes,
+          cost: Number(activity.cost || 0),
+          activity_order: activity.activity_order,
+        })
+      );
+
+      const activityCost =
+        formattedActivities.reduce(
+          (sum, activity) =>
+            sum + activity.cost,
+          0
+        );
+
+      days.push({
+        day: i + 1,
+        date: stop.start_date,
+        city: stop.city_name,
+        country: stop.country,
+
+        activities: formattedActivities,
+
+        estimated_cost: {
+          hotel: 0,
+          meals: 0,
+          transport: 0,
+          activities: activityCost,
+          total: activityCost,
+        },
+      });
+    }
+
+    // Get saved budget
+    const [budgets] = await pool.query(
+      `SELECT
+        budget_type,
+        hotel_cost,
+        meals_cost,
+        transport_cost,
+        budget_limit,
+        currency
+       FROM trip_budgets
+       WHERE trip_id = ?`,
+      [id]
+    );
+
+    let budget = null;
+
+    if (budgets.length > 0) {
+      const savedBudget = budgets[0];
+
+      const hotel =
+        Number(savedBudget.hotel_cost || 0);
+
+      const meals =
+        Number(savedBudget.meals_cost || 0);
+
+      const transport =
+        Number(savedBudget.transport_cost || 0);
+
+      const activities = days.reduce(
+        (sum, day) =>
+          sum + day.estimated_cost.activities,
+        0
+      );
+
+      const total =
+        hotel +
+        meals +
+        transport +
+        activities;
+
+      const [tripDates] = await pool.query(
+        `SELECT
+          DATEDIFF(end_date, start_date) + 1
+          AS number_of_days
+         FROM trips
+         WHERE id = ?`,
+        [id]
+      );
+
+      const numberOfDays =
+        Number(tripDates[0].number_of_days);
+
+      const averagePerDay =
+        numberOfDays > 0
+          ? Math.round(
+              total / numberOfDays
+            )
+          : total;
+
+      const budgetLimit =
+        savedBudget.budget_limit !== null
+          ? Number(savedBudget.budget_limit)
+          : null;
+
+      budget = {
+        budget_type:
+          savedBudget.budget_type,
+
+        hotel,
+
+        meals,
+
+        transport,
+
+        activities,
+
+        total,
+
+        average_per_day:
+          averagePerDay,
+
+        budget_limit:
+          budgetLimit,
+
+        remaining:
+          budgetLimit !== null
+            ? budgetLimit - total
+            : null,
+
+        over_budget:
+          budgetLimit !== null &&
+          total > budgetLimit,
+
+        currency:
+          savedBudget.currency || "INR",
+      };
+    }
+
+    // Return full itinerary
     res.json({
       success: true,
-      trip: trips[0],
+      trip,
+      days,
+      budget,
     });
+
   } catch (error) {
-    console.error("Get trip error:", error);
+    console.error(
+      "Get full trip error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
