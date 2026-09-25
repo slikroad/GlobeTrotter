@@ -1,0 +1,319 @@
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+.profile-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+
+  padding: 60px 20px 80px;
+
+  background:
+    linear-gradient(
+      rgba(248, 250, 252, 0.93),
+      rgba(240, 253, 244, 0.93)
+    ),
+    url("https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1800&q=80")
+      center/cover fixed;
+}
+
+/* Page heading */
+
+.profile-page > h1 {
+  margin: 0 auto 35px;
+
+  text-align: center;
+
+  color: #14532d;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+/* Profile information card */
+
+.profile-info {
+  max-width: 600px;
+  margin: 0 auto 25px;
+
+  padding: 35px;
+
+  box-sizing: border-box;
+
+  background: rgba(255, 255, 255, 0.97);
+
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+}
+
+.profile-info h2 {
+  margin: 0 0 25px;
+
+  color: #166534;
+
+  font-size: 28px;
+  font-weight: 800;
+
+  text-align: center;
+}
+
+.profile-info p {
+  margin: 15px 0;
+
+  padding-bottom: 14px;
+
+  color: #64748b;
+
+  font-size: 15px;
+  line-height: 1.5;
+
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-info p:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.profile-info strong {
+  color: #334155;
+}
+
+/* Main buttons */
+
+.profile-page > button {
+  display: block;
+
+  margin: 15px auto;
+
+  padding: 13px 25px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #166534;
+  color: white;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.profile-page > button:hover {
+  background: #14532d;
+  transform: translateY(-2px);
+}
+
+/* Edit form */
+
+.profile-form {
+  max-width: 600px;
+
+  margin: 0 auto 25px;
+
+  padding: 35px;
+
+  box-sizing: border-box;
+
+  background: rgba(255, 255, 255, 0.97);
+
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+}
+
+/* Form labels */
+
+.profile-form > label {
+  display: block;
+
+  margin: 17px 0 7px;
+
+  color: #334155;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-form > label:first-child {
+  margin-top: 0;
+}
+
+/* Inputs and select */
+
+.profile-form > input,
+.profile-form > select {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 13px 15px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+
+  background: white;
+  color: #1e293b;
+
+  font-family: inherit;
+  font-size: 15px;
+
+  outline: none;
+
+  transition: all 0.2s ease;
+}
+
+.profile-form > input:hover,
+.profile-form > select:hover {
+  border-color: #86efac;
+}
+
+.profile-form > input:focus,
+.profile-form > select:focus {
+  border-color: #16a34a;
+
+  box-shadow:
+    0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+
+/* Interests */
+
+.profile-form > div {
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 10px;
+
+  margin-top: 8px;
+}
+
+.profile-form > div > label {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin: 0;
+
+  padding: 12px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 10px;
+
+  color: #475569;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.profile-form > div > label:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.profile-form input[type="checkbox"] {
+  width: auto;
+
+  margin: 0;
+
+  accent-color: #16a34a;
+}
+
+/* Save and Cancel buttons */
+
+.profile-form > button {
+  margin-top: 25px;
+
+  padding: 13px 22px;
+
+  border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.profile-form > button:first-of-type {
+  border: none;
+
+  background: #166534;
+  color: white;
+}
+
+.profile-form > button:first-of-type:hover {
+  background: #14532d;
+  transform: translateY(-2px);
+}
+
+.profile-form > button:last-of-type {
+  margin-left: 10px;
+
+  border: 1px solid #166534;
+
+  background: white;
+  color: #166534;
+}
+
+.profile-form > button:last-of-type:hover {
+  background: #f0fdf4;
+  transform: translateY(-2px);
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .profile-page {
+    padding: 40px 15px 60px;
+  }
+
+  .profile-page > h1 {
+    font-size: 32px;
+    margin-bottom: 25px;
+  }
+
+  .profile-info,
+  .profile-form {
+    padding: 25px 20px;
+    border-radius: 16px;
+  }
+
+  .profile-info h2 {
+    font-size: 24px;
+  }
+
+  .profile-form > div {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form > button {
+    width: 100%;
+    margin-top: 15px;
+  }
+
+  .profile-form > button:last-of-type {
+    margin-left: 0;
+  }
+}
