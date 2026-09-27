@@ -1,0 +1,240 @@
+.welcome-card {
+  max-width: 1000px;
+  margin: 0 auto 30px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+.welcome-card h2 {
+  color: #14532d;
+  margin-bottom: 10px;
+}
+
+.welcome-card p {
+  color: #64748b;
+}
+
+.stats-grid {
+  max-width: 1000px;
+  margin: 0 auto 30px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.stat-card {
+  background: white;
+  padding: 25px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
+}
+
+.stat-card h3 {
+  color: #475569;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.stat-card p {
+  font-size: 30px;
+  font-weight: 800;
+  color: #166534;
+  margin: 0;
+}
+
+.budget-card {
+  max-width: 1000px;
+  margin: 0 auto 40px;
+  padding: 30px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.budget-card h2 {
+  margin-bottom: 20px;
+  color: #14532d;
+}
+
+.budget-card p {
+  margin: 10px 0;
+  color: #475569;
+}
+
+.dashboard-actions {
+  max-width: 1000px;
+  margin: 40px auto;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.dashboard-actions button {
+  padding: 13px 28px;
+  border: none;
+  border-radius: 10px;
+  background: #166534;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.dashboard-actions button:hover {
+  background: #14532d;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-actions {
+    flex-direction: column;
+    padding: 0 20px;
+  }
+
+  .dashboard-actions button {
+    width: 100%;
+  }
+}
+/* Dashboard Page */
+.dashboard-page {
+  min-height: 100vh;
+  padding: 40px 20px 60px;
+  background: #f8fafc;
+}
+
+.dashboard-page > h1 {
+  max-width: 1000px;
+  margin: 0 auto 35px;
+  text-align: center;
+  color: #14532d;
+  font-size: 36px;
+  font-weight: 800;
+}
+
+/* Your Trips heading */
+.dashboard-page > h2 {
+  max-width: 1000px;
+  margin: 40px auto 20px;
+  color: #14532d;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Empty Trips Card */
+.empty-dashboard {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 50px 30px;
+  background: white;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.empty-dashboard h2 {
+  margin-bottom: 12px;
+  color: #14532d;
+  font-size: 24px;
+}
+
+.empty-dashboard p {
+  margin-bottom: 25px;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.empty-dashboard button {
+  padding: 13px 28px;
+  border: none;
+  border-radius: 10px;
+  background: #166534;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.empty-dashboard button:hover {
+  background: #14532d;
+  transform: translateY(-2px);
+}
+/* Saved Trips */
+
+.trip-list {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.trip-card {
+  background: white;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  transition: 0.2s;
+}
+
+.trip-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.trip-card h2 {
+  margin: 0 0 18px;
+  color: #14532d;
+  font-size: 24px;
+}
+
+.trip-card p {
+  margin: 10px 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.trip-card strong {
+  color: #334155;
+}
+
+.trip-card button {
+  margin-top: 15px;
+  padding: 11px 22px;
+  border: none;
+  border-radius: 10px;
+  background: #166534;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.trip-card button:hover {
+  background: #14532d;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .trip-list {
+    grid-template-columns: 1fr;
+    padding: 0 10px;
+  }
+
+  .trip-card {
+    padding: 20px;
+  }
+}
